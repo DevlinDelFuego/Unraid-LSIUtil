@@ -78,7 +78,8 @@ END {
         key=ord[i]; dev=os[key]
         split(key, p, "_"); bus=p[1]+0; tgt=p[2]+0
         sas=(dev in sasmap) ? sasmap[dev] : ""
-        phy=(dev in phymap) ? phymap[dev]+0 : 0
+        # For SATA drives sas_end_device has no entry; target == PHY for direct-attached HBAs
+        phy=(dev in phymap) ? phymap[dev]+0 : tgt
         if (!first) printf ","
         first=0
         printf "{\"bus\":%d,\"target\":%d,\"sas_address\":\"%s\",\"handle\":\"\",\"encl\":\"\",\"slot\":0,\"phy\":%d,\"os_name\":\"%s\"}",

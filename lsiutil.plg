@@ -2,10 +2,10 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name        "LSIUtil">
 <!ENTITY author      "DevlinDelFuego">
-<!ENTITY version     "2026.06.20.3">
+<!ENTITY version     "2026.06.20.4">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
-<!ENTITY md5         "deed6894cc1374cf9abbeed7ed446378">
+<!ENTITY md5         "fb28b49f94ebd9e2c6451e66ff57510e">
 ]>
 
 <!--
@@ -25,6 +25,12 @@
         support="https://github.com/DevlinDelFuego/Unraid-LSIUtil/issues">
 
 <CHANGES>
+###2026.06.20.4###
+- Fix: Plugin update now applies cleanly without requiring uninstall+reinstall
+- Fix: Drives tab PHY column shows correct port number for SATA drives (target = PHY
+  for direct-attached drives without expanders); SAS address shows — for SATA drives
+  (SATA devices do not have SAS addresses — this is correct behaviour)
+
 ###2026.06.20.3###
 - Fix: Drives tab now reads SAS address and PHY number from sysfs sas_end_device entries
   (accurate for mpt3sas/mpt2sas), resolving wrong values shown in previous release
@@ -52,6 +58,18 @@
 - Auto-refresh every 60 seconds
 - lsiutil 1.70 bundled — no internet access required after package download
 </CHANGES>
+
+<!--
+  Pre-install: wipe any previously installed plugin files so that upgradepkg
+  always lays down a clean copy.  This ensures updates apply without needing
+  to uninstall+reinstall manually.  Config lives on /boot so it is unaffected.
+-->
+<FILE Run="/bin/bash">
+<INLINE>
+rm -rf /usr/local/emhttp/plugins/lsiutil 2>/dev/null || true
+echo "lsiutil: cleared old installation"
+</INLINE>
+</FILE>
 
 <!--
   Download and install the plugin package.
