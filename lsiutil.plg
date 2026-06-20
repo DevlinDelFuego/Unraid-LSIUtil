@@ -1,11 +1,11 @@
 <?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
-<!ENTITY name        "lsiutil">
+<!ENTITY name        "LSIUtil">
 <!ENTITY author      "DevlinDelFuego">
 <!ENTITY version     "2026.06.20">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
-<!ENTITY md5         "0f06339871a30d2da11ef6b5f5f4e154">
+<!ENTITY md5         "7b0ba37c654cc402d7938768220fa1bc">
 ]>
 
 <!--
@@ -25,11 +25,18 @@
         support="https://github.com/DevlinDelFuego/Unraid-LSIUtil/issues">
 
 <CHANGES>
-###2024.06.19###
+###2026.06.20###
+- Fix: Settings page now shows a proper icon card under Settings > System Settings
+- Fix: Dashboard tile now uses correct Unraid 7.2+ tile structure
+- Fix: Plugin name corrected to LSIUtil
+- Add: Settings tab inside the LSIUtil monitor page for quick access
+
+###2026.06.19###
 - Initial release
-- HBA temperature readout for LSI SAS controllers
-- Card model and firmware info panel
+- HBA temperature readout for LSI SAS controllers (LSI 9207-8i / SAS2308)
+- Card model, firmware, and PCIe info panel
 - Configurable alert threshold with Unraid notification
+- PHY health, attached drives, and event log tabs
 - Auto-refresh every 60 seconds
 - lsiutil 1.70 bundled — no internet access required after package download
 </CHANGES>

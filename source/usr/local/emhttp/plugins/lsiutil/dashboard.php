@@ -1,11 +1,11 @@
 <?PHP
-/* LSIUtil dashboard widget — cached HBA temperature card.
-   Cache file lives in /tmp so it resets on reboot; refreshed every 60 s. */
+/* LSIUtil dashboard tile — Unraid 7.2+ tile format.
+   Uses $mytiles variable that Unraid reads when rendering the dashboard.
+   Temperature result is cached in /tmp for 60 s to avoid hardware reads on every page load. */
 
-$PLUGIN = 'lsiutil';
-$CACHE  = "/tmp/{$PLUGIN}_dash.json";
-$SCRIPT = "/usr/local/emhttp/plugins/{$PLUGIN}/scripts/get_hba_info.sh";
-$CFG    = "/boot/config/plugins/{$PLUGIN}/{$PLUGIN}.cfg";
+$pluginname = 'LSIUtil';
+$CACHE  = '/tmp/lsiutil_dash.json';
+$SCRIPT = '/usr/local/emhttp/plugins/lsiutil/scripts/get_hba_info.sh';
 
 $data = null;
 if (file_exists($CACHE) && (time() - filemtime($CACHE)) < 60) {
@@ -21,46 +21,59 @@ if (!$data || isset($data['error'])) {
     }
 }
 
-$temp   = isset($data['temp'])       ? (int)$data['temp']    : null;
-$model  = !empty($data['board_name']) ? $data['board_name']   : ($data['model'] ?? 'Unknown');
-$status = $data['status']            ?? 'ok';
-$error  = $data['error']             ?? ($temp === null ? 'lsiutil unavailable' : null);
+$temp   = isset($data['temp']) ? (int)$data['temp'] : null;
+$model  = !empty($data['board_name']) ? $data['board_name'] : ($data['model'] ?? 'Unknown HBA');
+$status = $data['status'] ?? 'ok';
+$error  = $data['error']  ?? ($temp === null ? 'lsiutil unavailable' : null);
 
 $tc = match ($status) { 'alert' => '#e74c3c', 'warn' => '#f39c12', default => '#2ecc71' };
-?>
-<div id="lsiutil-dash-card">
-  <div>
-    <span class="left">
-      <i class="fa fa-thermometer-half" style="color:<?= $tc ?>"></i>
-      HBA TEMPERATURE
-    </span>
-    <span class="right">
-      <a href="/Tools/LSIUtil" style="color:#555;font-size:11px" title="Open LSIUtil">
-        <i class="fa fa-external-link"></i>
-      </a>
-    </span>
-  </div>
-  <div>
-    <?php if ($error): ?>
-      <dl>
-        <dt>Status</dt>
-        <dd style="color:#d88"><?= htmlspecialchars($error) ?></dd>
-      </dl>
-    <?php else: ?>
-      <dl>
-        <dt>Temperature</dt>
-        <dd style="color:<?= $tc ?>;font-weight:700"><?= $temp ?>°C</dd>
-      </dl>
-      <dl>
-        <dt>Model</dt>
-        <dd><?= htmlspecialchars($model) ?></dd>
-      </dl>
-      <?php if (!empty($data['pcie_width'])): ?>
-      <dl>
-        <dt>PCIe</dt>
-        <dd><?= htmlspecialchars($data['pcie_width'] . ' ' . ($data['pcie_speed'] ?? '')) ?></dd>
-      </dl>
-      <?php endif; ?>
-    <?php endif; ?>
-  </div>
-</div>
+
+if ($error) {
+    $subtitle = 'Unavailable';
+    $body = "<span style='color:#d88'>$error</span>";
+} else {
+    $subtitle = htmlspecialchars($model);
+    $body = "
+    <dl>
+      <dt>_(Temperature)_</dt>
+      <dd style='color:{$tc};font-weight:700'>{$temp}°C</dd>
+    </dl>
+    <dl>
+      <dt>_(Model)_</dt>
+      <dd>" . htmlspecialchars($model) . "</dd>
+    </dl>";
+    if (!empty($data['pcie_width'])) {
+        $pcie = htmlspecialchars($data['pcie_width'] . ' ' . ($data['pcie_speed'] ?? ''));
+        $body .= "<dl><dt>_(PCIe)_</dt><dd>{$pcie}</dd></dl>";
+    }
+}
+
+$mytiles[$pluginname]['column1'] = <<<EOT
+<tbody id="tblLsiutil" title="_(HBA Temperature)_">
+  <tr>
+    <td>
+      <span class="tile-header">
+        <span class="tile-header-left">
+          <i class="fa fa-thermometer-half f32" style="color:{$tc}"></i>
+          <div class="section">
+            <h3 class="tile-header-main">_(HBA Temperature)_</h3>
+            <span>{$subtitle}</span>
+          </div>
+        </span>
+        <span class="tile-header-right">
+          <span class="tile-header-right-controls">
+            <a href="/Tools/LSIUtil" title="_(Open LSIUtil)_">
+              <i class="fa fa-fw fa-cog control"></i>
+            </a>
+          </span>
+        </span>
+      </span>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      {$body}
+    </td>
+  </tr>
+</tbody>
+EOT;
