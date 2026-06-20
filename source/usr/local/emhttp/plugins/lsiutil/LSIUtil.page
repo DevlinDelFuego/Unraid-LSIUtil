@@ -1,0 +1,8 @@
+Menu="Tools"
+Title="LSIUtil"
+Icon="thermometer-half"
+Tag="lsiutil"
+Type="xmenu"
+Markdown="false"
+---
+<?PHP require_once "/usr/local/emhttp/plugins/lsiutil/lsiutil.php"; ?>
