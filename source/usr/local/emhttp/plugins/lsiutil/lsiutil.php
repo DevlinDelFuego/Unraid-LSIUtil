@@ -32,6 +32,27 @@ $showPhy    = (int)$cfg['SHOW_PHY'];
 $showDrives = (int)$cfg['SHOW_DRIVES'];
 $showEvents = (int)$cfg['SHOW_EVENTS'];
 
+// Handle settings form POST
+$saved = false;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_lsiutil'])) {
+    $cfg['HBA_PORT']        = max(1, min(8,   (int)($_POST['port']        ?? 1)));
+    $cfg['ALERT_THRESHOLD'] = max(1, min(150, (int)($_POST['threshold']   ?? 80)));
+    $cfg['SHOW_PCIE']       = isset($_POST['show_pcie'])   ? 1 : 0;
+    $cfg['SHOW_PHY']        = isset($_POST['show_phy'])    ? 1 : 0;
+    $cfg['SHOW_DRIVES']     = isset($_POST['show_drives']) ? 1 : 0;
+    $cfg['SHOW_EVENTS']     = isset($_POST['show_events']) ? 1 : 0;
+    @mkdir($PLUGIN_DIR, 0755, true);
+    $lines = array_map(fn($k, $v) => "$k=$v", array_keys($cfg), $cfg);
+    file_put_contents($CFG_FILE, implode("\n", $lines) . "\n");
+    $port      = (int)$cfg['HBA_PORT'];
+    $threshold = (int)$cfg['ALERT_THRESHOLD'];
+    $showPcie   = (int)$cfg['SHOW_PCIE'];
+    $showPhy    = (int)$cfg['SHOW_PHY'];
+    $showDrives = (int)$cfg['SHOW_DRIVES'];
+    $showEvents = (int)$cfg['SHOW_EVENTS'];
+    $saved      = true;
+}
+
 // Load overview data server-side on page load
 $raw  = file_exists($SCRIPT) ? shell_exec('bash ' . escapeshellarg($SCRIPT) . ' 2>/dev/null') : null;
 $data = $raw ? json_decode($raw, true) : null;
@@ -156,11 +177,29 @@ function statusLabel(string $s): string {
     cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;
 }
 .lu-refresh-btn:hover { border-color: #888; color: #ddd; }
-.lu-settings-link {
-    display: inline-block; margin-top: 12px;
-    font-size: 12px; color: #f5a623; text-decoration: none;
+/* ── Settings form ───────────────────────────────────────────────────────── */
+.lu-s-row { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+.lu-s-row:last-of-type { margin-bottom: 0; }
+.lu-s-label { flex: 0 0 190px; font-size: 13px; color: #ccc; padding-top: 8px; }
+.lu-s-label small { display: block; font-size: 11px; color: #555; margin-top: 3px; line-height: 1.4; }
+.lu-s-control { flex: 1; }
+.lu-s-control input[type=number] {
+    width: 90px; background: #111; border: 1px solid #3a3a3a;
+    border-radius: 4px; color: #ddd; padding: 7px 10px; font-size: 14px;
 }
-.lu-settings-link:hover { text-decoration: underline; }
+.lu-s-control input[type=number]:focus { outline: none; border-color: #f5a623; }
+.lu-toggle {
+    display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer;
+}
+.lu-toggle input[type=checkbox] { width: 16px; height: 16px; accent-color: #f5a623; cursor: pointer; }
+.lu-toggle span { font-size: 13px; color: #ddd; }
+.lu-toggle small { font-size: 11px; color: #555; margin-left: auto; }
+.lu-btn {
+    background: #f5a623; border: none; border-radius: 4px; color: #111;
+    font-size: 13px; font-weight: 700; padding: 9px 24px; cursor: pointer;
+    letter-spacing: 0.03em;
+}
+.lu-btn:hover { background: #d9901a; }
 </style>
 
 <div id="lu-wrap">
@@ -178,6 +217,7 @@ function statusLabel(string $s): string {
   <?php if ($showPhy):    ?><button class="lu-tab-btn" data-tab="phy"    onclick="luTab('phy')">PHY Health</button><?php endif; ?>
   <?php if ($showDrives): ?><button class="lu-tab-btn" data-tab="drives" onclick="luTab('drives')">Drives</button><?php endif; ?>
   <?php if ($showEvents): ?><button class="lu-tab-btn" data-tab="events" onclick="luTab('events')">Event Log</button><?php endif; ?>
+  <button class="lu-tab-btn" data-tab="settings" onclick="luTab('settings')" style="margin-left:auto">⚙ Settings</button>
 </div>
 
 <!-- ── Overview tab ──────────────────────────────────────────────────────── -->
@@ -212,7 +252,6 @@ function statusLabel(string $s): string {
     <div class="lu-ts" id="lu-ts">Last read: <?= date('H:i:s') ?></div>
   </div>
 
-  <a class="lu-settings-link" href="/Settings/LSIUtil">⚙ Plugin Settings</a>
 </div>
 
 <!-- ── PHY Health tab ────────────────────────────────────────────────────── -->
@@ -255,6 +294,75 @@ function statusLabel(string $s): string {
 <?php endif; ?>
 
 <?php endif; // end !$error ?>
+
+<!-- ── Settings tab ───────────────────────────────────────────────────────── -->
+<div id="tab-settings" class="lu-tab-pane">
+  <div class="lu-card first">
+
+    <?php if ($saved): ?>
+    <div style="background:#1a2a1a;border:1px solid #2a4a2a;border-radius:4px;
+                color:#8c8;font-size:12px;padding:8px 14px;margin-bottom:14px">
+      Settings saved.
+    </div>
+    <?php endif; ?>
+
+    <form method="post">
+
+      <h3>HBA Connection</h3>
+
+      <div class="lu-s-row">
+        <div class="lu-s-label">
+          lsiutil Port
+          <small>Run lsiutil with no args to list available ports. Usually 1.</small>
+        </div>
+        <div class="lu-s-control">
+          <input type="number" name="port" value="<?= (int)$cfg['HBA_PORT'] ?>" min="1" max="8">
+        </div>
+      </div>
+
+      <div class="lu-s-row">
+        <div class="lu-s-label">
+          Alert Threshold (°C)
+          <small>Unraid notification fires when HBA temperature reaches this value.</small>
+        </div>
+        <div class="lu-s-control">
+          <input type="number" name="threshold" value="<?= (int)$cfg['ALERT_THRESHOLD'] ?>" min="1" max="150">
+        </div>
+      </div>
+
+      <hr class="lu-divider">
+      <h3>Display Panels</h3>
+      <p style="font-size:12px;color:#555;margin:0 0 14px">
+        Temperature &amp; card info are always shown. Toggle additional panels below.
+      </p>
+
+      <label class="lu-toggle">
+        <input type="checkbox" name="show_pcie" <?= (int)$cfg['SHOW_PCIE'] ? 'checked' : '' ?>>
+        <span>PCIe Information</span>
+        <small>Width &amp; speed in Overview</small>
+      </label>
+      <label class="lu-toggle">
+        <input type="checkbox" name="show_phy" <?= (int)$cfg['SHOW_PHY'] ? 'checked' : '' ?>>
+        <span>PHY Health</span>
+        <small>SAS link state &amp; error counters</small>
+      </label>
+      <label class="lu-toggle">
+        <input type="checkbox" name="show_drives" <?= (int)$cfg['SHOW_DRIVES'] ? 'checked' : '' ?>>
+        <span>Attached Drives</span>
+        <small>SAS addresses, enclosure/slot, OS names</small>
+      </label>
+      <label class="lu-toggle">
+        <input type="checkbox" name="show_events" <?= (int)$cfg['SHOW_EVENTS'] ? 'checked' : '' ?>>
+        <span>Event Log</span>
+        <small>HBA firmware event log</small>
+      </label>
+
+      <hr class="lu-divider">
+      <button class="lu-btn" type="submit" name="save_lsiutil" value="1">Save Settings</button>
+
+    </form>
+  </div>
+</div>
 
 </div><!-- #lu-wrap -->
 
@@ -328,5 +436,10 @@ function statusLabel(string $s): string {
     }
 
     timer = setTimeout(refreshOverview, REFRESH_MS);
+
+    // Auto-open tab from URL param (?tab=xxx) or after settings save
+    var urlTab = new URLSearchParams(window.location.search).get('tab');
+    <?php if ($saved): ?>urlTab = 'settings';<?php endif; ?>
+    if (urlTab && urlTab !== 'overview') { luTab(urlTab); }
 })();
 </script>

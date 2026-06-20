@@ -1,0 +1,8 @@
+Menu="Dashboard"
+Title="HBA Temperature"
+Icon="thermometer-half"
+Tag="lsiutil-dash"
+Type="xmenu"
+Markdown="false"
+---
+<?PHP require_once "/usr/local/emhttp/plugins/lsiutil/dashboard.php"; ?>
