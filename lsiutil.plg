@@ -2,10 +2,10 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name        "lsiutil">
 <!ENTITY author      "DevlinDelFuego">
-<!ENTITY version     "2026.06.19">
+<!ENTITY version     "2026.06.20">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
-<!ENTITY md5         "d18f8dc00742276cd727fbd573abbf82">
+<!ENTITY md5         "0f06339871a30d2da11ef6b5f5f4e154">
 ]>
 
 <!--
