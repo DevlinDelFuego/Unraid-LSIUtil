@@ -3,7 +3,7 @@
 <!ENTITY name        "lsiutil">
 <!ENTITY author      "DevlinDelFuego">
 <!ENTITY version     "2026.06.19">
-<!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/master/lsiutil.plg">
+<!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
 <!ENTITY md5         "d18f8dc00742276cd727fbd573abbf82">
 ]>
