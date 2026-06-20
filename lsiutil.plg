@@ -2,10 +2,10 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name        "LSIUtil">
 <!ENTITY author      "DevlinDelFuego">
-<!ENTITY version     "2026.06.20.4">
+<!ENTITY version     "2026.06.20.5">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
-<!ENTITY md5         "fb28b49f94ebd9e2c6451e66ff57510e">
+<!ENTITY md5         "0a12c50287afa306e7dda7fa67e563e1">
 ]>
 
 <!--
@@ -25,8 +25,12 @@
         support="https://github.com/DevlinDelFuego/Unraid-LSIUtil/issues">
 
 <CHANGES>
+###2026.06.20.5###
+- Fix: Plugin update robustness — wipe of old files now happens AFTER the new package
+  is confirmed on disk, preventing blank plugin if download fails mid-update
+- Install now uses tar -xJf directly rather than upgradepkg for reliable file replacement
+
 ###2026.06.20.4###
-- Fix: Plugin update now applies cleanly without requiring uninstall+reinstall
 - Fix: Drives tab PHY column shows correct port number for SATA drives (target = PHY
   for direct-attached drives without expanders); SAS address shows — for SATA drives
   (SATA devices do not have SAS addresses — this is correct behaviour)
@@ -60,21 +64,9 @@
 </CHANGES>
 
 <!--
-  Pre-install: wipe any previously installed plugin files so that upgradepkg
-  always lays down a clean copy.  This ensures updates apply without needing
-  to uninstall+reinstall manually.  Config lives on /boot so it is unaffected.
--->
-<FILE Run="/bin/bash">
-<INLINE>
-rm -rf /usr/local/emhttp/plugins/lsiutil 2>/dev/null || true
-echo "lsiutil: cleared old installation"
-</INLINE>
-</FILE>
-
-<!--
-  Download and install the plugin package.
-  lsiutil binary is included inside the .txz, so this is the only download.
-  On subsequent boots Unraid re-installs from the cached copy on the boot drive.
+  Step 1: Download the package to the boot drive (re-download only when MD5 changes).
+  upgradepkg --install-new is used here solely to trigger Unraid's download logic;
+  the actual file extraction is handled in Step 2.
 -->
 <FILE Name="/boot/config/plugins/lsiutil/lsiutil.txz" Run="upgradepkg --install-new">
   <URL>&pkgURL;</URL>
@@ -82,18 +74,25 @@ echo "lsiutil: cleared old installation"
 </FILE>
 
 <!--
-  Post-install: create default config and set the binary executable.
+  Step 2: Force-extract from the now-confirmed package so every file is current.
+  Wipe happens AFTER the download succeeds — if the download ever fails the old
+  files stay intact and the plugin remains functional.
 -->
 <FILE Run="/bin/bash">
 <INLINE>
-# Ensure binary is executable (survives package re-installs)
+PKG=/boot/config/plugins/lsiutil/lsiutil.txz
+if [ ! -f "$PKG" ]; then
+  echo "lsiutil ERROR: package not found at $PKG — aborting install"
+  exit 1
+fi
+rm -rf /usr/local/emhttp/plugins/lsiutil 2>/dev/null
+tar -xJf "$PKG" -C /
 chmod +x /usr/local/emhttp/plugins/lsiutil/lsiutil.x86_64 2>/dev/null
 
-# Write default config on first install
+# Write default config on first install only
 if [ ! -f /boot/config/plugins/lsiutil/lsiutil.cfg ]; then
   mkdir -p /boot/config/plugins/lsiutil
-  echo "HBA_PORT=1"          > /boot/config/plugins/lsiutil/lsiutil.cfg
-  echo "ALERT_THRESHOLD=80" >> /boot/config/plugins/lsiutil/lsiutil.cfg
+  printf 'HBA_PORT=1\nALERT_THRESHOLD=80\n' > /boot/config/plugins/lsiutil/lsiutil.cfg
   echo "lsiutil: default config written"
 fi
 echo "lsiutil plugin ready"
