@@ -1,0 +1,78 @@
+<?xml version='1.0' standalone='yes'?>
+<!DOCTYPE PLUGIN [
+<!ENTITY name        "lsiutil">
+<!ENTITY author      "DevlinDelFuego">
+<!ENTITY version     "2026.06.19">
+<!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/master/lsiutil.plg">
+<!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
+<!ENTITY md5         "d18f8dc00742276cd727fbd573abbf82">
+]>
+
+<!--
+  LSIUtil HBA Temperature Monitor for Unraid
+  ==========================================
+  Reads HBA temperature and card info directly from LSI SAS controllers
+  (SAS2308, SAS2008, 9207-8i, etc.) using lsiutil via the mpt2sas/mpt3sas driver.
+
+  The lsiutil binary is bundled inside lsiutil.txz — nothing is downloaded at
+  install time beyond the single package file.
+-->
+<PLUGIN name="&name;"
+        author="&author;"
+        version="&version;"
+        pluginURL="&pluginURL;"
+        icon="thermometer-half"
+        support="https://github.com/DevlinDelFuego/Unraid-LSIUtil/issues">
+
+<CHANGES>
+###2024.06.19###
+- Initial release
+- HBA temperature readout for LSI SAS controllers
+- Card model and firmware info panel
+- Configurable alert threshold with Unraid notification
+- Auto-refresh every 60 seconds
+- lsiutil 1.70 bundled — no internet access required after package download
+</CHANGES>
+
+<!--
+  Download and install the plugin package.
+  lsiutil binary is included inside the .txz, so this is the only download.
+  On subsequent boots Unraid re-installs from the cached copy on the boot drive.
+-->
+<FILE Name="/boot/config/plugins/lsiutil/lsiutil.txz" Run="upgradepkg --install-new">
+  <URL>&pkgURL;</URL>
+  <MD5>&md5;</MD5>
+</FILE>
+
+<!--
+  Post-install: create default config and set the binary executable.
+-->
+<FILE Run="/bin/bash">
+<INLINE>
+# Ensure binary is executable (survives package re-installs)
+chmod +x /usr/local/emhttp/plugins/lsiutil/lsiutil.x86_64 2>/dev/null
+
+# Write default config on first install
+if [ ! -f /boot/config/plugins/lsiutil/lsiutil.cfg ]; then
+  mkdir -p /boot/config/plugins/lsiutil
+  echo "HBA_PORT=1"          > /boot/config/plugins/lsiutil/lsiutil.cfg
+  echo "ALERT_THRESHOLD=80" >> /boot/config/plugins/lsiutil/lsiutil.cfg
+  echo "lsiutil: default config written"
+fi
+echo "lsiutil plugin ready"
+</INLINE>
+</FILE>
+
+<!--
+  Uninstall: remove plugin files; leave config on the boot drive so settings
+  survive a reinstall.
+-->
+<FILE Run="/bin/bash" Method="remove">
+<INLINE>
+removepkg lsiutil 2>/dev/null
+rm -rf /usr/local/emhttp/plugins/lsiutil
+echo "lsiutil plugin removed. Config kept at /boot/config/plugins/lsiutil/"
+</INLINE>
+</FILE>
+
+</PLUGIN>
