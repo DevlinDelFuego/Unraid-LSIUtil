@@ -1,7 +1,7 @@
 <?PHP
 /* LSIUtil dashboard tile — Unraid 7.2+ tile format.
    Uses $mytiles variable that Unraid reads when rendering the dashboard.
-   Temperature result is cached in /tmp for 60 s to avoid hardware reads on every page load. */
+   Temperature result cached in /tmp for 60 s to avoid hardware reads on every page load. */
 
 $pluginname = 'LSIUtil';
 $CACHE  = '/tmp/lsiutil_dash.json';
@@ -28,41 +28,41 @@ $error  = $data['error']  ?? ($temp === null ? 'lsiutil unavailable' : null);
 
 $tc = match ($status) { 'alert' => '#e74c3c', 'warn' => '#f39c12', default => '#2ecc71' };
 
+$subtitle = htmlspecialchars($model);
+
 if ($error) {
-    $subtitle = 'Unavailable';
-    $body = "<span style='color:#d88'>$error</span>";
+    $body = "<span style='color:#d88'>" . htmlspecialchars($error) . "</span>";
 } else {
-    $subtitle = htmlspecialchars($model);
     $body = "
     <dl>
-      <dt>_(Temperature)_</dt>
+      <dt>Temperature</dt>
       <dd style='color:{$tc};font-weight:700'>{$temp}°C</dd>
     </dl>
     <dl>
-      <dt>_(Model)_</dt>
+      <dt>Model</dt>
       <dd>" . htmlspecialchars($model) . "</dd>
     </dl>";
     if (!empty($data['pcie_width'])) {
-        $pcie = htmlspecialchars($data['pcie_width'] . ' ' . ($data['pcie_speed'] ?? ''));
-        $body .= "<dl><dt>_(PCIe)_</dt><dd>{$pcie}</dd></dl>";
+        $pcie = htmlspecialchars(trim($data['pcie_width'] . ' ' . ($data['pcie_speed'] ?? '')));
+        $body .= "<dl><dt>PCIe</dt><dd>{$pcie}</dd></dl>";
     }
 }
 
 $mytiles[$pluginname]['column1'] = <<<EOT
-<tbody id="tblLsiutil" title="_(HBA Temperature)_">
+<tbody id="tblLsiutil" title="HBA Temperature">
   <tr>
     <td>
       <span class="tile-header">
         <span class="tile-header-left">
           <i class="fa fa-thermometer-half f32" style="color:{$tc}"></i>
           <div class="section">
-            <h3 class="tile-header-main">_(HBA Temperature)_</h3>
+            <h3 class="tile-header-main">HBA Temperature</h3>
             <span>{$subtitle}</span>
           </div>
         </span>
         <span class="tile-header-right">
           <span class="tile-header-right-controls">
-            <a href="/Tools/LSIUtil" title="_(Open LSIUtil)_">
+            <a href="/Tools/LSIUtil_Monitor" title="Open LSIUtil">
               <i class="fa fa-fw fa-cog control"></i>
             </a>
           </span>

@@ -126,7 +126,7 @@ function lu_checked(int $val): string { return $val ? 'checked' : ''; }
     </div>
 
     <button class="lu-btn" type="submit" name="save_lsiutil" value="1">Save Settings</button>
-    <a class="lu-link" href="/Tools/LSIUtil">← Open LSIUtil monitor</a>
+    <a class="lu-link" href="/Tools/LSIUtil_Monitor">← Open LSIUtil monitor</a>
 
   </form>
 </div>
