@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name        "LSIUtil">
 <!ENTITY author      "DevlinDelFuego">
-<!ENTITY version     "2026.06.20.5">
+<!ENTITY version     "2026.06.20.6">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
 <!ENTITY md5         "0a12c50287afa306e7dda7fa67e563e1">
@@ -14,7 +14,7 @@
   Reads HBA temperature and card info directly from LSI SAS controllers
   (SAS2308, SAS2008, 9207-8i, etc.) using lsiutil via the mpt2sas/mpt3sas driver.
 
-  The lsiutil binary is bundled inside lsiutil.txz — nothing is downloaded at
+  The lsiutil binary is bundled inside lsiutil.txz - nothing is downloaded at
   install time beyond the single package file.
 -->
 <PLUGIN name="&name;"
@@ -25,15 +25,19 @@
         support="https://github.com/DevlinDelFuego/Unraid-LSIUtil/issues">
 
 <CHANGES>
+###2026.06.20.6###
+- Fix: PLG file was using UTF-8 em dash characters that Unraid's ASCII-only XML parser
+  rejects with "xml parse error". Replaced all non-ASCII characters with plain hyphens.
+
 ###2026.06.20.5###
-- Fix: Plugin update robustness — wipe of old files now happens AFTER the new package
+- Fix: Plugin update robustness - wipe of old files now happens AFTER the new package
   is confirmed on disk, preventing blank plugin if download fails mid-update
 - Install now uses tar -xJf directly rather than upgradepkg for reliable file replacement
 
 ###2026.06.20.4###
 - Fix: Drives tab PHY column shows correct port number for SATA drives (target = PHY
-  for direct-attached drives without expanders); SAS address shows — for SATA drives
-  (SATA devices do not have SAS addresses — this is correct behaviour)
+  for direct-attached drives without expanders); SAS address shows - for SATA drives
+  (SATA devices do not have SAS addresses - this is correct behaviour)
 
 ###2026.06.20.3###
 - Fix: Drives tab now reads SAS address and PHY number from sysfs sas_end_device entries
@@ -60,7 +64,7 @@
 - Configurable alert threshold with Unraid notification
 - PHY health, attached drives, and event log tabs
 - Auto-refresh every 60 seconds
-- lsiutil 1.70 bundled — no internet access required after package download
+- lsiutil 1.70 bundled - no internet access required after package download
 </CHANGES>
 
 <!--
@@ -75,14 +79,14 @@
 
 <!--
   Step 2: Force-extract from the now-confirmed package so every file is current.
-  Wipe happens AFTER the download succeeds — if the download ever fails the old
+  Wipe happens AFTER the download succeeds - if the download ever fails the old
   files stay intact and the plugin remains functional.
 -->
 <FILE Run="/bin/bash">
 <INLINE>
 PKG=/boot/config/plugins/lsiutil/lsiutil.txz
 if [ ! -f "$PKG" ]; then
-  echo "lsiutil ERROR: package not found at $PKG — aborting install"
+  echo "lsiutil ERROR: package not found at $PKG - aborting install"
   exit 1
 fi
 rm -rf /usr/local/emhttp/plugins/lsiutil 2>/dev/null
