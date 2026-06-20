@@ -40,7 +40,7 @@ function luTable(array $headers, array $rows): string {
     $h .= '</tr></thead><tbody>';
     foreach ($rows as $cols) {
         $h .= '<tr>';
-        foreach ($cols as $i => $cell) $h .= '<td>' . $cell . '</td>';
+        foreach ($cols as $cell) $h .= '<td>' . $cell . '</td>';
         $h .= '</tr>';
     }
     return $h . '</tbody></table>';
@@ -81,12 +81,15 @@ if ($type === 'drives') {
 
     $rows = [];
     foreach ($drives as $d) {
-        $os = $d['os_name'] ? '<code>'.$d['os_name'].'</code>' : '<span class="lu-muted">—</span>';
+        $os  = !empty($d['os_name'])     ? '<code>' . $d['os_name'] . '</code>'              : '<span class="lu-muted">—</span>';
+        $sas = !empty($d['sas_address']) ? '<code>' . strtoupper($d['sas_address']) . '</code>' : '<span class="lu-muted">—</span>';
+        $phy = isset($d['phy']) && $d['phy'] !== '' ? 'PHY ' . $d['phy']                      : '<span class="lu-muted">—</span>';
+        $loc = (!empty($d['encl']) && $d['encl'] !== '0000') ? $d['encl'] . '/' . $d['slot']  : '<span class="lu-muted">—</span>';
         $rows[] = [
             $d['bus'] . ':' . $d['target'],
-            'PHY ' . $d['phy'],
-            '<code>' . strtoupper($d['sas_address']) . '</code>',
-            $d['encl'] . '/' . $d['slot'],
+            $phy,
+            $sas,
+            $loc,
             $os,
         ];
     }
