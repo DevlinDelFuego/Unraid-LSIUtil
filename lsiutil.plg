@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name        "LSIUtil">
 <!ENTITY author      "DevlinDelFuego">
-<!ENTITY version     "2026.06.20.7">
+<!ENTITY version     "2026.06.30.1">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
 <!ENTITY md5         "0a12c50287afa306e7dda7fa67e563e1">
@@ -25,6 +25,10 @@
         support="https://github.com/DevlinDelFuego/Unraid-LSIUtil/issues">
 
 <CHANGES>
+###2026.06.30.1###
+- Consolidate settings: removed duplicate Settings tab from HBA Monitor page
+- Settings now live exclusively at Settings > LSIUtil; monitor links there instead
+
 ###2026.06.20.7###
 - Fix: XML comment contained double-hyphen (--) which is forbidden by the XML spec
   and causes Unraid's parser to reject the PLG with "xml parse error"
