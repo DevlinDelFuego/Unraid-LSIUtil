@@ -2,10 +2,10 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name        "LSIUtil">
 <!ENTITY author      "DevlinDelFuego">
-<!ENTITY version     "2026.06.30.1">
+<!ENTITY version     "2026.07.09.1">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
-<!ENTITY md5         "ac426a59afc60ea8675e284deb5f622d">
+<!ENTITY md5         "4866f6c3b2e864fc70f889cbe41ab720">
 ]>
 
 <!--
@@ -25,6 +25,21 @@
         support="https://github.com/DevlinDelFuego/Unraid-LSIUtil/issues">
 
 <CHANGES>
+###2026.07.09.1###
+- Add: Syslog History tab - pulls historical drive/HBA errors from /var/log/syslog,
+  scoped to the mpt2sas/mpt3sas/mptsas driver so it survives reboots (the HBA firmware
+  Event Log tab only ever shows live entries, so a drive that already failed and was
+  disabled before a reboot leaves no trace there - this tab is where to find it)
+- Fix: Overview/dashboard now shows "N/A" instead of a misleading 0°C when the HBA chip
+  has no onboard temperature sensor (MPI2 reports IOCTemperature=0 for this - affects
+  SAS2008-based cards such as the 9201-16e/9211-8i); badge shows N/A and no alert fires
+- Fix: multi-HBA systems - card model, firmware, and board name now match the port
+  selected in Settings instead of always showing the first-listed card's info
+- Fix: Attached Drives sysfs fallback used a wrong path (hostN/device/targetH:C:T
+  instead of hostN/targetH:C:T), which meant it silently found zero drives whenever
+  lsiutil's own OS-name listing didn't work for a card (e.g. some SAS3 tri-mode HBAs
+  or drives behind an expander) - this was the fallback's only job and it never worked
+
 ###2026.06.30.1###
 - Consolidate settings: removed duplicate Settings tab from HBA Monitor page
 - Settings now live exclusively at Settings > LSIUtil; monitor links there instead

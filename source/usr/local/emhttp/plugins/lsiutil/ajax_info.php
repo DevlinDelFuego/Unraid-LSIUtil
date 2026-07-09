@@ -4,9 +4,10 @@
  * ?type=phy       → HTML  (PHY health table)
  * ?type=drives    → HTML  (attached drives table)
  * ?type=events    → HTML  (event log table)
+ * ?type=syslog    → HTML  (historical drive/HBA errors from /var/log/syslog)
  */
 
-$type    = in_array($_GET['type'] ?? '', ['overview','phy','drives','events'])
+$type    = in_array($_GET['type'] ?? '', ['overview','phy','drives','events','syslog'])
            ? $_GET['type'] : 'overview';
 $scripts = '/usr/local/emhttp/plugins/lsiutil/scripts';
 
@@ -22,6 +23,7 @@ $scriptMap = [
     'phy'    => "$scripts/get_phy_health.sh",
     'drives' => "$scripts/get_attached_drives.sh",
     'events' => "$scripts/get_event_log.sh",
+    'syslog' => "$scripts/get_syslog_events.sh",
 ];
 
 $raw  = shell_exec('bash ' . escapeshellarg($scriptMap[$type]) . ' 2>/dev/null');
@@ -117,5 +119,32 @@ if ($type === 'events') {
         ];
     }
     echo luTable(['Seq', 'Qualifier', 'Data', 'Timestamp'], $rows);
+    exit;
+}
+
+/* ── Syslog History ──────────────────────────────────────────────────────── */
+if ($type === 'syslog') {
+    $entries = $data['entries'] ?? [];
+    $note    = $data['note']    ?? '';
+    if ($note) echo '<p class="lu-muted">' . htmlspecialchars($note) . '</p>';
+    if (empty($entries)) { echo '<p class="lu-muted">No log entries.</p>'; exit; }
+
+    $rows = [];
+    foreach (array_reverse($entries) as $e) {
+        $line = $e['line'] ?? '';
+        // Split off the leading "Mon DD HH:MM:SS host" syslog prefix into its own column
+        if (preg_match('/^(\S+\s+\d+\s+\d+:\d+:\d+)\s+\S+\s+(.*)$/', $line, $m)) {
+            $time = $m[1];
+            $msg  = $m[2];
+        } else {
+            $time = '';
+            $msg  = $line;
+        }
+        $rows[] = [
+            '<code>' . htmlspecialchars($time) . '</code>',
+            htmlspecialchars($msg),
+        ];
+    }
+    echo luTable(['Time', 'Message'], $rows);
     exit;
 }

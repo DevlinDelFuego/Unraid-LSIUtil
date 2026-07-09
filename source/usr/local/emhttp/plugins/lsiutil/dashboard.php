@@ -31,11 +31,14 @@ if (!$data || isset($data['error'])) {
     }
 }
 
-$temp     = isset($data['temp'])       ? (int)$data['temp']    : null;
-$status   = $data['status']            ?? 'ok';
-$error    = $data['error']             ?? ($temp === null ? 'lsiutil unavailable' : null);
-$tc       = match ($status) { 'alert' => '#e74c3c', 'warn' => '#f39c12', default => '#2ecc71' };
-$badge    = match ($status) { 'alert' => 'ALERT',   'warn' => 'WARNING',  default => 'NORMAL'  };
+$temp          = isset($data['temp'])       ? (int)$data['temp']    : null;
+$status        = $data['status']            ?? 'ok';
+$tempSupported = $data['temp_supported']    ?? true;
+$error         = $data['error']             ?? ($temp === null ? 'lsiutil unavailable' : null);
+$tc       = match ($status) { 'alert' => '#e74c3c', 'warn' => '#f39c12', 'unsupported' => '#666', default => '#2ecc71' };
+$badge    = match ($status) { 'alert' => 'ALERT',   'warn' => 'WARNING',  'unsupported' => 'N/A', default => 'NORMAL'  };
+$tempDisplay = $tempSupported ? $temp : 'N/A';
+$tempUnit    = $tempSupported ? '°C'  : '';
 
 $boardName = htmlspecialchars(!empty($data['board_name']) ? $data['board_name'] : ($data['model'] ?? 'Unknown'));
 $chip      = htmlspecialchars($data['model']    ?? '');
@@ -92,16 +95,16 @@ if ($error) {
     $body = "
     <div class='lu-d-overview'>
       <div class='lu-d-circle'>
-        <span class='v'>{$temp}</span>
-        <span class='u'>°C</span>
+        <span class='v'>{$tempDisplay}</span>
+        <span class='u'>{$tempUnit}</span>
       </div>
       <div class='lu-d-meta'>
         <p>Model: <span>{$boardName}</span></p>"
         . ($chip     ? "<p>Chip: <span>{$chip}</span></p>"                                : '')
         . ($firmware ? "<p>Firmware: <span>{$firmware}</span></p>"                        : '')
-        . "        <p>Port: <span>{$portName} (lsiutil -p{$port})</span></p>
-        <p>Alert Threshold: <span>{$threshold}°C</span></p>
-        <span class='lu-d-badge'>{$badge}</span>
+        . "        <p>Port: <span>{$portName} (lsiutil -p{$port})</span></p>"
+        . ($tempSupported ? "<p>Alert Threshold: <span>{$threshold}°C</span></p>" : "<p><span style='color:#666'>No onboard temperature sensor</span></p>")
+        . "        <span class='lu-d-badge'>{$badge}</span>
       </div>
     </div>
     {$pcieRow}

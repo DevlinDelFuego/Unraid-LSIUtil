@@ -42,12 +42,17 @@ if [ -d "/sys/class/sas_end_device" ]; then
 fi > "$TMPSAS"
 
 # ── Stage 3: sysfs fallback if lsiutil -a 42,0 returned nothing ──────────────
+# Target directories nest directly under the host node itself
+# (/sys/class/scsi_host/hostN/targetN:C:T/), not under hostN/device/ - that path
+# points to the host's PCI parent instead and never matches, silently returning
+# zero drives for any card/topology (e.g. SAS3 tri-mode cards, expanders) where
+# lsiutil's own OS-name output isn't usable.
 if [ ! -s "$TMPOS" ]; then
     for h in /sys/class/scsi_host/host*/; do
         proc=$(cat "${h}proc_name" 2>/dev/null)
         case "$proc" in mpt3sas|mpt2sas|mptsas) ;; *) continue ;; esac
         hn=${h%/}; hn=${hn##*host}
-        for t in "${h}device/target${hn}:"[0-9]*/; do
+        for t in "${h}target${hn}:"[0-9]*/; do
             [ -d "$t" ] || continue
             IFS=':' read -r _ ch tg <<< "${t##*/target}"
             for l in "${t}"*/; do

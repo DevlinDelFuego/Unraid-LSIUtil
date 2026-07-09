@@ -14,6 +14,7 @@ $cfg = [
     'SHOW_PHY'        => 1,
     'SHOW_DRIVES'     => 1,
     'SHOW_EVENTS'     => 1,
+    'SHOW_SYSLOG'     => 1,
 ];
 
 if (file_exists($CFG_FILE)) {
@@ -31,6 +32,7 @@ $showPcie   = (int)$cfg['SHOW_PCIE'];
 $showPhy    = (int)$cfg['SHOW_PHY'];
 $showDrives = (int)$cfg['SHOW_DRIVES'];
 $showEvents = (int)$cfg['SHOW_EVENTS'];
+$showSyslog = (int)$cfg['SHOW_SYSLOG'];
 
 // Load overview data server-side on page load
 $raw  = file_exists($SCRIPT) ? shell_exec('bash ' . escapeshellarg($SCRIPT) . ' 2>/dev/null') : null;
@@ -38,10 +40,10 @@ $data = $raw ? json_decode($raw, true) : null;
 $error = $data['error'] ?? ($raw ? null : 'Backend script not found.');
 
 function statusColor(string $s): string {
-    return match($s) { 'alert' => '#e74c3c', 'warn' => '#f39c12', default => '#2ecc71' };
+    return match($s) { 'alert' => '#e74c3c', 'warn' => '#f39c12', 'unsupported' => '#666', default => '#2ecc71' };
 }
 function statusLabel(string $s): string {
-    return match($s) { 'alert' => 'ALERT', 'warn' => 'WARNING', default => 'NORMAL' };
+    return match($s) { 'alert' => 'ALERT', 'warn' => 'WARNING', 'unsupported' => 'N/A', default => 'NORMAL' };
 }
 ?>
 
@@ -163,8 +165,9 @@ function statusLabel(string $s): string {
 <?php if ($error): ?>
   <div class="lu-error"><strong>Error:</strong> <?= htmlspecialchars($error) ?></div>
 <?php else:
-    $tc    = statusColor($data['status'] ?? 'ok');
-    $badge = statusLabel($data['status'] ?? 'ok');
+    $tc          = statusColor($data['status'] ?? 'ok');
+    $badge       = statusLabel($data['status'] ?? 'ok');
+    $tempSupported = $data['temp_supported'] ?? true;
 ?>
 
 <!-- ── Tab bar ───────────────────────────────────────────────────────────── -->
@@ -173,6 +176,7 @@ function statusLabel(string $s): string {
   <?php if ($showPhy):    ?><button class="lu-tab-btn" data-tab="phy"    onclick="luTab('phy')">PHY Health</button><?php endif; ?>
   <?php if ($showDrives): ?><button class="lu-tab-btn" data-tab="drives" onclick="luTab('drives')">Drives</button><?php endif; ?>
   <?php if ($showEvents): ?><button class="lu-tab-btn" data-tab="events" onclick="luTab('events')">Event Log</button><?php endif; ?>
+  <?php if ($showSyslog): ?><button class="lu-tab-btn" data-tab="syslog" onclick="luTab('syslog')">Syslog History</button><?php endif; ?>
   <a href="/Settings/LSIUtil_Settings" style="margin-left:auto;padding:8px 18px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#666;text-decoration:none;" onmouseover="this.style.color='#bbb'" onmouseout="this.style.color='#666'">&#9881; Settings</a>
 </div>
 
@@ -182,15 +186,19 @@ function statusLabel(string $s): string {
 
     <div class="lu-overview-row">
       <div class="lu-circle" id="lu-circle">
-        <span class="val" id="lu-val"><?= $data['temp'] ?></span>
-        <span class="unit">°C</span>
+        <span class="val" id="lu-val"><?= $tempSupported ? $data['temp'] : 'N/A' ?></span>
+        <span class="unit"><?= $tempSupported ? '°C' : '' ?></span>
       </div>
       <div class="lu-meta">
         <p>Model: <span><?= htmlspecialchars($data['board_name'] ?: ($data['model'] ?? 'Unknown')) ?></span></p>
         <p>Chip: <span><?= htmlspecialchars($data['model'] ?? 'Unknown') ?></span></p>
         <p>Firmware: <span><?= htmlspecialchars($data['firmware'] ?? 'Unknown') ?></span></p>
         <p>Port: <span><?= htmlspecialchars($data['port_name'] ?? 'ioc0') ?> (lsiutil -p<?= $port ?>)</span></p>
+        <?php if ($tempSupported): ?>
         <p>Alert Threshold: <span><?= $threshold ?>°C</span></p>
+        <?php else: ?>
+        <p><span class="lu-muted">This chip does not report a temperature (no onboard sensor)</span></p>
+        <?php endif; ?>
         <span class="lu-badge" id="lu-badge"><?= $badge ?></span>
       </div>
     </div>
@@ -249,6 +257,19 @@ function statusLabel(string $s): string {
 </div>
 <?php endif; ?>
 
+<!-- ── Syslog History tab ────────────────────────────────────────────────── -->
+<?php if ($showSyslog): ?>
+<div id="tab-syslog" class="lu-tab-pane">
+  <div class="lu-card first">
+    <div class="lu-tab-toolbar">
+      <span style="font-size:12px;color:#555;">Historical drive/HBA errors from /var/log/syslog — unlike the Event Log tab, this survives reboots</span>
+      <button class="lu-refresh-btn" onclick="luReloadTab('syslog')">Refresh</button>
+    </div>
+    <div id="syslog-content"><div class="lu-loading">Loading…</div></div>
+  </div>
+</div>
+<?php endif; ?>
+
 <?php endif; // end !$error ?>
 
 </div><!-- #lu-wrap -->
@@ -294,8 +315,8 @@ function statusLabel(string $s): string {
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 if (d.error) return;
-                var colors = { alert: '#e74c3c', warn: '#f39c12', ok: '#2ecc71' };
-                var labels = { alert: 'ALERT',   warn: 'WARNING', ok: 'NORMAL'  };
+                var colors = { alert: '#e74c3c', warn: '#f39c12', ok: '#2ecc71', unsupported: '#666' };
+                var labels = { alert: 'ALERT',   warn: 'WARNING', ok: 'NORMAL',  unsupported: 'N/A' };
                 var c      = colors[d.status] || colors.ok;
 
                 var circle = document.getElementById('lu-circle');
@@ -304,7 +325,7 @@ function statusLabel(string $s): string {
                 var ts     = document.getElementById('lu-ts');
 
                 if (circle) circle.style.setProperty('--tc', c);
-                if (val)    val.textContent   = d.temp;
+                if (val)    val.textContent   = d.temp_supported === false ? 'N/A' : d.temp;
                 if (badge)  { badge.textContent = labels[d.status] || 'NORMAL'; badge.style.background = c; }
                 if (ts)     ts.textContent    = 'Last read: ' + new Date().toLocaleTimeString();
 

@@ -13,6 +13,7 @@ $defaults = [
     'SHOW_PHY'        => 1,
     'SHOW_DRIVES'     => 1,
     'SHOW_EVENTS'     => 1,
+    'SHOW_SYSLOG'     => 1,
 ];
 $cfg = $defaults;
 
@@ -34,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_lsiutil'])) {
         'SHOW_PHY'        => isset($_POST['show_phy'])    ? 1 : 0,
         'SHOW_DRIVES'     => isset($_POST['show_drives']) ? 1 : 0,
         'SHOW_EVENTS'     => isset($_POST['show_events']) ? 1 : 0,
+        'SHOW_SYSLOG'     => isset($_POST['show_syslog']) ? 1 : 0,
     ];
     @mkdir($PLUGIN_DIR, 0755, true);
     $lines = array_map(fn($k, $v) => "$k=$v", array_keys($new), $new);
@@ -122,6 +124,11 @@ function lu_checked(int $val): string { return $val ? 'checked' : ''; }
         <input type="checkbox" name="show_events" <?= lu_checked((int)$cfg['SHOW_EVENTS']) ?>>
         <span>Event Log</span>
         <small>HBA firmware event log (requires expert mode)</small>
+      </label>
+      <label class="lu-toggle">
+        <input type="checkbox" name="show_syslog" <?= lu_checked((int)$cfg['SHOW_SYSLOG']) ?>>
+        <span>Syslog History</span>
+        <small>Historical drive/HBA errors from /var/log/syslog - survives reboots</small>
       </label>
     </div>
 

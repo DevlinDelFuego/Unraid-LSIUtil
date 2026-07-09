@@ -29,6 +29,10 @@ if [ -z "$TEMP_HEX" ]; then
 fi
 TEMP=$((16#${TEMP_HEX#0x}))
 
+# MPI2_IOUNITPAGE7_IOC_TEMP_NOT_PRESENT: firmware reports 0 when the chip has no
+# onboard temperature sensor (e.g. SAS2008-based cards like the 9201-16e/9211-8i).
+if [ "$TEMP" -eq 0 ]; then TEMP_SUPPORTED=false; else TEMP_SUPPORTED=true; fi
+
 parse_hex() { echo "$IOC_OUTPUT" | grep "$1" | grep -oE '0x[0-9A-Fa-f]+' | head -1; }
 
 PCIE_WIDTH_HEX=$(parse_hex "PCIeWidth:")
@@ -55,8 +59,12 @@ case "${POWER_HEX,,}" in
 esac
 
 # ── 2. Banner: chip model, firmware revision, port name ─────────────────────
+# The banner lists every adapter found, one row per port (1-indexed, matching -p).
+# Select the row for the configured PORT so multi-card systems don't always show
+# card 1's info; fall back to the first row if PORT is out of range.
 BANNER=$(printf "0\n" | "$LSIUTIL" 2>/dev/null)
-CARD_LINE=$(echo "$BANNER" | grep -E "^\s+[0-9]+\.\s+ioc" | head -1)
+CARD_LINE=$(echo "$BANNER" | grep -E "^\s+[0-9]+\.\s+ioc" | sed -n "${PORT}p")
+[ -n "$CARD_LINE" ] || CARD_LINE=$(echo "$BANNER" | grep -E "^\s+[0-9]+\.\s+ioc" | head -1)
 MODEL=$(echo "$CARD_LINE"    | grep -oE 'SAS[0-9]+[A-Za-z0-9]*' | head -1)
 PORT_NAME=$(echo "$CARD_LINE" | awk '{print $2}')
 
@@ -70,19 +78,22 @@ fi
 
 # ── 3. Board manufacturing info: product name, PCI location ─────────────────
 BOARD_RAW=$("$LSIUTIL" -b 2>/dev/null)
-BOARD_LINE=$(echo "$BOARD_RAW" | grep "ioc" | head -1)
+BOARD_LINE=$(echo "$BOARD_RAW" | grep "ioc" | sed -n "${PORT}p")
+[ -n "$BOARD_LINE" ] || BOARD_LINE=$(echo "$BOARD_RAW" | grep "ioc" | head -1)
 BOARD_NAME=$(echo "$BOARD_LINE" | awk '{print $5}')
 PCI_BUS=$(echo "$BOARD_LINE"   | awk '{print $3}')
 PCI_DEV=$(echo "$BOARD_LINE"   | awk '{print $4}')
 
 # ── 4. Status ────────────────────────────────────────────────────────────────
-if   [ "$TEMP" -ge "$ALERT" ];                then STATUS="alert"
+if   [ "$TEMP_SUPPORTED" = false ];           then STATUS="unsupported"
+elif [ "$TEMP" -ge "$ALERT" ];                then STATUS="alert"
 elif [ "$TEMP" -ge $(( ALERT - 10 )) ];       then STATUS="warn"
 else STATUS="ok"; fi
 
 cat <<EOF
 {
   "temp": $TEMP,
+  "temp_supported": $TEMP_SUPPORTED,
   "model": "${MODEL:-Unknown}",
   "firmware": "${FW_VER}",
   "port_name": "${PORT_NAME:-ioc0}",
