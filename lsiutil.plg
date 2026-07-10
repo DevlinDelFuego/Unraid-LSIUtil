@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name        "LSIUtil">
 <!ENTITY author      "DevlinDelFuego">
-<!ENTITY version     "2026.07.09.2">
+<!ENTITY version     "2026.07.09.3">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
 <!ENTITY md5         "5876d7b44408a859c58de34a59e0d05a">
@@ -22,9 +22,19 @@
         version="&version;"
         pluginURL="&pluginURL;"
         icon="thermometer-half"
-        support="https://github.com/DevlinDelFuego/Unraid-LSIUtil/issues">
+        support="https://forums.unraid.net/topic/195220-support-devlindelfuego-all-images-and-files">
 
 <CHANGES>
+###2026.07.09.3###
+- Fix: Attached Drives table now correctly shows all drives on multi-IOC cards (e.g.
+  9300-16i, which is two SAS3008 chips on one board, enumerated as two SCSI hosts).
+  Each controller numbers its own channel:target starting from 0, so a drive on
+  controller 2 could share the same channel:target as one on controller 1 - the
+  drive list was keyed on channel:target alone, so these collided and one
+  controller's drives silently replaced the other's in the table. Drives are now
+  keyed by controller+channel+target, and a "Ctrl" column appears in the table
+  whenever more than one controller is present (issue #5)
+
 ###2026.07.09.2###
 - Fix: Attached Drives detection rewritten to use /sys/class/scsi_device (the kernel's
   flat SCSI device registry) instead of lsiutil's own "-a 42,0" output and instead of
@@ -40,7 +50,7 @@
   scoped to the mpt2sas/mpt3sas/mptsas driver so it survives reboots (the HBA firmware
   Event Log tab only ever shows live entries, so a drive that already failed and was
   disabled before a reboot leaves no trace there - this tab is where to find it)
-- Fix: Overview/dashboard now shows "N/A" instead of a misleading 0°C when the HBA chip
+- Fix: Overview/dashboard now shows "N/A" instead of a misleading 0C when the HBA chip
   has no onboard temperature sensor (MPI2 reports IOCTemperature=0 for this - affects
   SAS2008-based cards such as the 9201-16e/9211-8i); badge shows N/A and no alert fires
 - Fix: multi-HBA systems - card model, firmware, and board name now match the port

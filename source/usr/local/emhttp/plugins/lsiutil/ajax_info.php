@@ -81,24 +81,26 @@ if ($type === 'drives') {
     $drives = $data['drives'] ?? [];
     if (empty($drives)) { echo '<p class="lu-muted">No drives detected.</p>'; exit; }
 
+    $multiController = count(array_unique(array_column($drives, 'controller'))) > 1;
+
     $rows = [];
     foreach ($drives as $d) {
         $os  = !empty($d['os_name'])     ? '<code>' . $d['os_name'] . '</code>'              : '<span class="lu-muted">—</span>';
         $sas = !empty($d['sas_address']) ? '<code>' . strtoupper($d['sas_address']) . '</code>' : '<span class="lu-muted">—</span>';
         $phy = isset($d['phy']) && $d['phy'] !== '' ? 'PHY ' . $d['phy']                      : '<span class="lu-muted">—</span>';
         $loc = (!empty($d['encl']) && $d['encl'] !== '0000') ? $d['encl'] . '/' . $d['slot']  : '<span class="lu-muted">—</span>';
-        $rows[] = [
-            $d['bus'] . ':' . $d['target'],
-            $phy,
-            $sas,
-            $loc,
-            $os,
-        ];
+        $row = [];
+        if ($multiController) $row[] = $d['controller'] ?? '—';
+        $row[] = $d['bus'] . ':' . $d['target'];
+        $row[] = $phy;
+        $row[] = $sas;
+        $row[] = $loc;
+        $row[] = $os;
+        $rows[] = $row;
     }
-    echo luTable(
-        ['Bus:Tgt', 'Port', 'SAS Address', 'Encl/Slot', 'OS Device'],
-        $rows
-    );
+    $headers = ['Bus:Tgt', 'Port', 'SAS Address', 'Encl/Slot', 'OS Device'];
+    if ($multiController) array_unshift($headers, 'Ctrl');
+    echo luTable($headers, $rows);
     exit;
 }
 

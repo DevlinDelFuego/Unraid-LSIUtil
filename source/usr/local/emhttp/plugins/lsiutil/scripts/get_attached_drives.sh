@@ -26,6 +26,18 @@ if [ ${#HOSTS[@]} -eq 0 ]; then
     exit 0
 fi
 
+# Cards with multiple IOC chips (e.g. 9300-16i = two SAS3008s) register as
+# separate scsi_host entries, each numbering its own channel:target from 0.
+# Map host number -> 1-based controller index (sorted) so drives from
+# different controllers with identical channel:target never collide below.
+IFS=$'\n' HOSTS_SORTED=($(sort -n <<< "${HOSTS[*]}")); unset IFS
+declare -A HOST_IDX
+ctrl_idx=1
+for hn in "${HOSTS_SORTED[@]}"; do
+    HOST_IDX[$hn]=$ctrl_idx
+    ctrl_idx=$((ctrl_idx + 1))
+done
+
 # ── OS device names, scoped to our hosts ─────────────────────────────────────
 TMPOS=$(mktemp)
 for sd in /sys/class/scsi_device/*:*:*:*/; do
@@ -35,7 +47,7 @@ for sd in /sys/class/scsi_device/*:*:*:*/; do
     [ "${lu:-0}" = "0" ] || continue
     blk=$(ls "${sd}device/block/" 2>/dev/null | head -1)
     [ -n "$blk" ] || blk=$(ls "${sd}block/" 2>/dev/null | head -1)
-    [ -n "$blk" ] && printf "%d_%d /dev/%s\n" "${ch:-0}" "${tg:-0}" "$blk" >> "$TMPOS"
+    [ -n "$blk" ] && printf "%d_%d_%d /dev/%s\n" "${HOST_IDX[$hn]:-0}" "${ch:-0}" "${tg:-0}" "$blk" >> "$TMPOS"
 done
 
 # ── SAS address + PHY from sysfs sas_end_device ───────────────────────────────
@@ -64,7 +76,7 @@ fi
 awk '
 BEGIN { first=1; printf "{\"drives\":[" }
 NR==FNR {
-    # TMPOS: "bus_tgt /dev/sdX"
+    # TMPOS: "ctrl_bus_tgt /dev/sdX"
     os[$1]=$2; n++; ord[n]=$1
     next
 }
@@ -75,14 +87,14 @@ NR==FNR {
 END {
     for (i=1; i<=n; i++) {
         key=ord[i]; dev=os[key]
-        split(key, p, "_"); bus=p[1]+0; tgt=p[2]+0
+        split(key, p, "_"); ctrl=p[1]+0; bus=p[2]+0; tgt=p[3]+0
         sas=(dev in sasmap) ? sasmap[dev] : ""
         # For SATA drives sas_end_device has no entry; target == PHY for direct-attached HBAs
         phy=(dev in phymap) ? phymap[dev]+0 : tgt
         if (!first) printf ","
         first=0
-        printf "{\"bus\":%d,\"target\":%d,\"sas_address\":\"%s\",\"handle\":\"\",\"encl\":\"\",\"slot\":0,\"phy\":%d,\"os_name\":\"%s\"}",
-            bus, tgt, sas, phy, dev
+        printf "{\"controller\":%d,\"bus\":%d,\"target\":%d,\"sas_address\":\"%s\",\"handle\":\"\",\"encl\":\"\",\"slot\":0,\"phy\":%d,\"os_name\":\"%s\"}",
+            ctrl, bus, tgt, sas, phy, dev
     }
     printf "]}"
 }
