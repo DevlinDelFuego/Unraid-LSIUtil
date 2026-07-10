@@ -5,7 +5,7 @@
 <!ENTITY version     "2026.07.09.3">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
-<!ENTITY md5         "5876d7b44408a859c58de34a59e0d05a">
+<!ENTITY md5         "9a16cec84fdb6b3c3885e92d19a4ffbf">
 ]>
 
 <!--
