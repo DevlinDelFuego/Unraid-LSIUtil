@@ -2,10 +2,10 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name        "LSIUtil">
 <!ENTITY author      "DevlinDelFuego">
-<!ENTITY version     "2026.07.09.1">
+<!ENTITY version     "2026.07.09.2">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
-<!ENTITY md5         "4866f6c3b2e864fc70f889cbe41ab720">
+<!ENTITY md5         "5876d7b44408a859c58de34a59e0d05a">
 ]>
 
 <!--
@@ -25,6 +25,16 @@
         support="https://github.com/DevlinDelFuego/Unraid-LSIUtil/issues">
 
 <CHANGES>
+###2026.07.09.2###
+- Fix: Attached Drives detection rewritten to use /sys/class/scsi_device (the kernel's
+  flat SCSI device registry) instead of lsiutil's own "-a 42,0" output and instead of
+  hand-walking scsi_host's device tree. The previous sysfs fallback (2026.07.09.1) only
+  found drives one level under the host node, which is true for direct-attached drives
+  but not when a SAS expander is in the path - there, target directories sit several
+  levels deeper (hostN/port-N:0/expander-N:0/port-N:0:X/end_device-N:0:X/targetN:C:T/...)
+  and were never matched, so cards behind an expander (or where lsiutil's own device
+  listing doesn't parse) still showed "No drives detected" even after that fix
+
 ###2026.07.09.1###
 - Add: Syslog History tab - pulls historical drive/HBA errors from /var/log/syslog,
   scoped to the mpt2sas/mpt3sas/mptsas driver so it survives reboots (the HBA firmware

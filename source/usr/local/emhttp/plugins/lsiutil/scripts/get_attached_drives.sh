@@ -1,31 +1,44 @@
 #!/bin/bash
-# Attached drives — three-stage detection:
-#   1. lsiutil -a 42,0  → bus:target + OS device name  (authoritative device list)
-#   2. sysfs sas_end_device  → SAS address + PHY per block device
-#   3. sysfs host scan  → fallback OS device names if lsiutil -a 42,0 returns nothing
+# Attached drives.
+#
+# Primary source: /sys/class/scsi_device/H:C:T:L/ - the kernel's flat SCSI device
+# registry, scoped to host numbers owned by the mpt2sas/mpt3sas/mptsas driver.
+# This is used instead of lsiutil's own "-a 42,0" OS-name listing (which doesn't
+# produce usable output on some SAS3 cards/firmware) and instead of hand-walking
+# scsi_host's device tree (which only works for direct-attached drives - when a
+# SAS expander is in the path, target directories sit many levels deeper, e.g.
+# hostN/port-N:0/expander-N:0/port-N:0:X/end_device-N:0:X/targetN:C:T/..., not
+# directly under hostN). /sys/class/scsi_device is flat regardless of topology
+# depth, so it works the same for direct-attach and expander-attached drives.
+#
+# Enrichment: SAS address + PHY from sysfs sas_end_device (also flat/topology-agnostic).
 
-LSIUTIL="/usr/local/emhttp/plugins/lsiutil/lsiutil.x86_64"
-CFG="/boot/config/plugins/lsiutil/lsiutil.cfg"
-PORT=1
-[ -f "$CFG" ] && source "$CFG" && PORT="${HBA_PORT:-1}"
+HOSTS=()
+for h in /sys/class/scsi_host/host*/; do
+    proc=$(cat "${h}proc_name" 2>/dev/null)
+    case "$proc" in mpt3sas|mpt2sas|mptsas) ;; *) continue ;; esac
+    hn=${h%/}; hn=${hn##*host}
+    HOSTS+=("$hn")
+done
 
-[ -x "$LSIUTIL" ] || { echo '{"error":"lsiutil binary not found"}'; exit 1; }
+if [ ${#HOSTS[@]} -eq 0 ]; then
+    echo '{"drives":[],"note":"No mpt2sas/mpt3sas/mptsas host adapter found"}'
+    exit 0
+fi
 
-# ── Stage 1: OS device name map from lsiutil ─────────────────────────────────
+# ── OS device names, scoped to our hosts ─────────────────────────────────────
 TMPOS=$(mktemp)
-"$LSIUTIL" -p"$PORT" -a 42,0 2>/dev/null | awk '
-/\/dev\/[a-z]/ {
-    bus=0; tgt=0; dev=""; n=0
-    for (i=1;i<=NF;i++) {
-        if ($i ~ /^\/dev\//) { dev=$i }
-        else if ($i ~ /^[0-9]+$/) { n++; if (n==1) bus=$i+0; else if (n==2) tgt=$i+0 }
-    }
-    if (dev != "") printf "%d_%d %s\n", bus, tgt, dev
-}' > "$TMPOS"
+for sd in /sys/class/scsi_device/*:*:*:*/; do
+    [ -d "$sd" ] || continue
+    IFS=':' read -r hn ch tg lu <<< "$(basename "${sd%/}")"
+    case " ${HOSTS[*]} " in *" $hn "*) ;; *) continue ;; esac
+    [ "${lu:-0}" = "0" ] || continue
+    blk=$(ls "${sd}device/block/" 2>/dev/null | head -1)
+    [ -n "$blk" ] || blk=$(ls "${sd}block/" 2>/dev/null | head -1)
+    [ -n "$blk" ] && printf "%d_%d /dev/%s\n" "${ch:-0}" "${tg:-0}" "$blk" >> "$TMPOS"
+done
 
-# ── Stage 2: SAS address + PHY from sysfs ────────────────────────────────────
-# /sys/class/sas_end_device/ exists on kernels with SAS transport support (mpt3sas)
-# Each entry has sas_address, phy_identifier, and a device link to the SCSI device tree
+# ── SAS address + PHY from sysfs sas_end_device ───────────────────────────────
 TMPSAS=$(mktemp)
 if [ -d "/sys/class/sas_end_device" ]; then
     for ed in /sys/class/sas_end_device/end_device-*/; do
@@ -41,29 +54,10 @@ if [ -d "/sys/class/sas_end_device" ]; then
     done
 fi > "$TMPSAS"
 
-# ── Stage 3: sysfs fallback if lsiutil -a 42,0 returned nothing ──────────────
-# Target directories nest directly under the host node itself
-# (/sys/class/scsi_host/hostN/targetN:C:T/), not under hostN/device/ - that path
-# points to the host's PCI parent instead and never matches, silently returning
-# zero drives for any card/topology (e.g. SAS3 tri-mode cards, expanders) where
-# lsiutil's own OS-name output isn't usable.
 if [ ! -s "$TMPOS" ]; then
-    for h in /sys/class/scsi_host/host*/; do
-        proc=$(cat "${h}proc_name" 2>/dev/null)
-        case "$proc" in mpt3sas|mpt2sas|mptsas) ;; *) continue ;; esac
-        hn=${h%/}; hn=${hn##*host}
-        for t in "${h}target${hn}:"[0-9]*/; do
-            [ -d "$t" ] || continue
-            IFS=':' read -r _ ch tg <<< "${t##*/target}"
-            for l in "${t}"*/; do
-                [ -d "$l" ] || continue
-                IFS=':' read -r _ _ _ lu <<< "$(basename "$l")"
-                [ "${lu:-0}" = "0" ] || continue
-                blk=$(ls "${l}block/" 2>/dev/null | head -1)
-                [ -n "$blk" ] && printf "%d_%d /dev/%s\n" "${ch:-0}" "${tg:-0}" "$blk" >> "$TMPOS"
-            done
-        done
-    done
+    echo '{"drives":[]}'
+    rm -f "$TMPOS" "$TMPSAS"
+    exit 0
 fi
 
 # ── Build JSON: join OS-name list with sysfs SAS/PHY map ─────────────────────
