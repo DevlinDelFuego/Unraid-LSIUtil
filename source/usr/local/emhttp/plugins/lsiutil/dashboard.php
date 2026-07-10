@@ -74,6 +74,11 @@ echo <<<CSS
 }
 #tblLsiutil .lu-d-pcie span { color:#ddd; font-weight:500; }
 #tblLsiutil .lu-d-ts { font-size:11px; color:#444; text-align:right; margin-top:8px; }
+#tblLsiutil .lu-d-header-temp {
+  font-size:13px; font-weight:700; color:{$tc};
+  border:1px solid {$tc}; border-radius:12px; padding:2px 10px;
+  margin-right:8px; white-space:nowrap;
+}
 </style>
 CSS;
 
@@ -111,6 +116,10 @@ if ($error) {
     <div class='lu-d-ts'>Last read: {$ts}</div>";
 }
 
+// Compact temp badge shown in the tile header itself, so it's visible even
+// when the user has collapsed the tile body (issue #4)
+$headerTemp = ($error || !$tempSupported) ? '' : "<span class=\"lu-d-header-temp\">{$tempDisplay}{$tempUnit}</span>";
+
 $mytiles[$pluginname]['column1'] = <<<EOT
 <tbody id="tblLsiutil" title="HBA Temperature">
   <tr>
@@ -125,7 +134,7 @@ $mytiles[$pluginname]['column1'] = <<<EOT
         </span>
         <span class="tile-header-right">
           <span class="tile-header-right-controls">
-            <a href="/Tools/LSIUtil_Monitor" title="Open LSIUtil">
+            {$headerTemp}<a href="/Tools/LSIUtil_Monitor" title="Open LSIUtil">
               <i class="fa fa-fw fa-cog control"></i>
             </a>
           </span>

@@ -2,10 +2,10 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name        "LSIUtil">
 <!ENTITY author      "DevlinDelFuego">
-<!ENTITY version     "2026.07.09.3">
+<!ENTITY version     "2026.07.10.1">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
-<!ENTITY md5         "9a16cec84fdb6b3c3885e92d19a4ffbf">
+<!ENTITY md5         "657a99ef550a91ceef8a2200f406805b">
 ]>
 
 <!--
@@ -25,6 +25,23 @@
         support="https://forums.unraid.net/topic/195220-support-devlindelfuego-all-images-and-files">
 
 <CHANGES>
+###2026.07.10.1###
+- Fix: Overview now lists every detected controller instead of only the one selected
+  in Settings. Multi-HBA systems (e.g. three separate SAS2008 cards) previously had
+  no way to see the other cards without repeatedly changing HBA_PORT. An "All Detected
+  Controllers" table now appears on the Overview tab whenever more than one controller
+  is found (issue #3)
+- Fix: Firmware version and PCIe link speed are now read from kernel sysfs
+  (/sys/class/scsi_host/hostN/version_fw, /sys/bus/pci/devices/.../current_link_speed)
+  instead of trusting lsiutil's own MPI2 register reads, which are unreliable on
+  SAS3-generation chips (SAS3008/3108) - firmware showed an internal build id rather
+  than the real version, and PCIe speed was stuck reporting Gen2 even on a Gen3 link.
+  lsiutil's values remain the fallback, so SAS2 cards are unaffected (issue #6,
+  thanks to ElUtku for the root-cause analysis and fix)
+- Add: HBA temperature now shows in the dashboard tile's header row, so it's visible
+  even when the tile is collapsed - matches how other Unraid dashboard tiles surface
+  a headline stat without expanding (issue #4)
+
 ###2026.07.09.3###
 - Fix: Attached Drives table now correctly shows all drives on multi-IOC cards (e.g.
   9300-16i, which is two SAS3008 chips on one board, enumerated as two SCSI hosts).

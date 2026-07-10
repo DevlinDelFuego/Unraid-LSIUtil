@@ -168,6 +168,7 @@ function statusLabel(string $s): string {
     $tc          = statusColor($data['status'] ?? 'ok');
     $badge       = statusLabel($data['status'] ?? 'ok');
     $tempSupported = $data['temp_supported'] ?? true;
+    $controllers   = $data['controllers'] ?? [];
 ?>
 
 <!-- ── Tab bar ───────────────────────────────────────────────────────────── -->
@@ -215,6 +216,27 @@ function statusLabel(string $s): string {
 
     <div class="lu-ts" id="lu-ts">Last read: <?= date('H:i:s') ?></div>
   </div>
+
+  <?php if (count($controllers) > 1): ?>
+  <div class="lu-card">
+    <h3>All Detected Controllers</h3>
+    <table class="lu-table">
+      <thead><tr><th>Port</th><th>Model</th><th>Firmware</th><th>Temp</th><th>Status</th></tr></thead>
+      <tbody>
+        <?php foreach ($controllers as $c): ?>
+        <tr>
+          <td><?= (int)($c['port'] ?? 0) ?><?= ($c['port'] ?? 0) == $port ? ' <span class="lu-muted">(selected)</span>' : '' ?></td>
+          <td><?= htmlspecialchars($c['model'] ?? 'Unknown') ?></td>
+          <td><code><?= htmlspecialchars($c['firmware'] ?? 'Unknown') ?></code></td>
+          <td><?= ($c['temp_supported'] ?? true) ? htmlspecialchars($c['temp'] ?? '') . '°C' : '<span class="lu-muted">N/A</span>' ?></td>
+          <td><span style="color:<?= statusColor($c['status'] ?? 'ok') ?>;font-weight:700;"><?= statusLabel($c['status'] ?? 'ok') ?></span></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+    <p class="lu-muted" style="margin-top:10px;">The card above shows the port selected in Settings (used for the dashboard tile and alert notifications). Change it there to switch which card is watched.</p>
+  </div>
+  <?php endif; ?>
 
 </div>
 
