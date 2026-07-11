@@ -57,9 +57,10 @@ echo <<<CSS
   flex-shrink:0;
 }
 #tblLsiutil .lu-d-circle .v { font-size:28px; font-weight:700; color:{$tc}; line-height:1; }
-#tblLsiutil .lu-d-circle .u { font-size:12px; color:#666; margin-top:3px; }
-#tblLsiutil .lu-d-meta p   { margin:3px 0; font-size:13px; color:#888; }
-#tblLsiutil .lu-d-meta span { color:#ddd; font-weight:500; }
+#tblLsiutil .lu-d-circle .u { font-size:12px; opacity:.6; margin-top:3px; }
+#tblLsiutil .lu-d-meta p    { margin:3px 0; font-size:13px; }
+#tblLsiutil .lu-d-meta .lu-d-label { opacity:.65; }
+#tblLsiutil .lu-d-meta span { font-weight:500; }
 #tblLsiutil .lu-d-badge {
   display:inline-block; margin-top:6px;
   padding:2px 12px; border-radius:12px;
@@ -68,12 +69,13 @@ echo <<<CSS
 }
 #tblLsiutil .lu-d-pcie {
   display:flex; gap:18px; flex-wrap:wrap;
-  font-size:13px; color:#888;
+  font-size:13px;
   padding-top:12px; margin-top:8px;
-  border-top:1px solid #2a2a2a;
+  border-top:1px solid rgba(128,128,128,.3);
 }
-#tblLsiutil .lu-d-pcie span { color:#ddd; font-weight:500; }
-#tblLsiutil .lu-d-ts { font-size:11px; color:#444; text-align:right; margin-top:8px; }
+#tblLsiutil .lu-d-pcie .lu-d-label { opacity:.65; }
+#tblLsiutil .lu-d-pcie span { font-weight:500; }
+#tblLsiutil .lu-d-ts { font-size:11px; opacity:.5; text-align:right; margin-top:8px; }
 #tblLsiutil .lu-d-header-temp {
   font-size:13px; font-weight:700; color:{$tc};
   border:1px solid {$tc}; border-radius:12px; padding:2px 10px;
@@ -86,10 +88,10 @@ CSS;
 $pcieRow = '';
 if (!$error) {
     $pcieParts = [];
-    if (!empty($data['pcie_width']))   $pcieParts[] = 'PCIe Width: <span>' . htmlspecialchars($data['pcie_width'])   . '</span>';
-    if (!empty($data['pcie_speed']))   $pcieParts[] = 'PCIe Speed: <span>' . htmlspecialchars($data['pcie_speed'])   . '</span>';
-    if (!empty($data['power_mode']))   $pcieParts[] = 'Power Mode: <span>' . htmlspecialchars($data['power_mode'])   . '</span>';
-    if (!empty($data['pci_location'])) $pcieParts[] = 'PCI Location: <span>' . htmlspecialchars($data['pci_location']) . '</span>';
+    if (!empty($data['pcie_width']))   $pcieParts[] = '<span class="lu-d-label">PCIe Width:</span> <span>' . htmlspecialchars($data['pcie_width'])   . '</span>';
+    if (!empty($data['pcie_speed']))   $pcieParts[] = '<span class="lu-d-label">PCIe Speed:</span> <span>' . htmlspecialchars($data['pcie_speed'])   . '</span>';
+    if (!empty($data['power_mode']))   $pcieParts[] = '<span class="lu-d-label">Power Mode:</span> <span>' . htmlspecialchars($data['power_mode'])   . '</span>';
+    if (!empty($data['pci_location'])) $pcieParts[] = '<span class="lu-d-label">PCI Location:</span> <span>' . htmlspecialchars($data['pci_location']) . '</span>';
     if ($pcieParts) $pcieRow = '<div class="lu-d-pcie">' . implode('', $pcieParts) . '</div>';
 }
 
@@ -104,11 +106,11 @@ if ($error) {
         <span class='u'>{$tempUnit}</span>
       </div>
       <div class='lu-d-meta'>
-        <p>Model: <span>{$boardName}</span></p>"
-        . ($chip     ? "<p>Chip: <span>{$chip}</span></p>"                                : '')
-        . ($firmware ? "<p>Firmware: <span>{$firmware}</span></p>"                        : '')
-        . "        <p>Port: <span>{$portName} (lsiutil -p{$port})</span></p>"
-        . ($tempSupported ? "<p>Alert Threshold: <span>{$threshold}°C</span></p>" : "<p><span style='color:#666'>No onboard temperature sensor</span></p>")
+        <p><span class='lu-d-label'>Model:</span> <span>{$boardName}</span></p>"
+        . ($chip     ? "<p><span class='lu-d-label'>Chip:</span> <span>{$chip}</span></p>"                                : '')
+        . ($firmware ? "<p><span class='lu-d-label'>Firmware:</span> <span>{$firmware}</span></p>"                        : '')
+        . "        <p><span class='lu-d-label'>Port:</span> <span>{$portName} (lsiutil -p{$port})</span></p>"
+        . ($tempSupported ? "<p><span class='lu-d-label'>Alert Threshold:</span> <span>{$threshold}°C</span></p>" : "<p><span class='lu-d-label'>No onboard temperature sensor</span></p>")
         . "        <span class='lu-d-badge'>{$badge}</span>
       </div>
     </div>
