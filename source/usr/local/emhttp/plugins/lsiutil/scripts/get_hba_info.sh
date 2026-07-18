@@ -95,7 +95,19 @@ read_controller() {
 
     # Board manufacturing info: product name, PCI location.
     BOARD_LINE=$(echo "$BOARD_RAW" | grep "ioc" | sed -n "${N}p")
-    BOARD_NAME=$(echo "$BOARD_LINE" | awk '{print $5}')
+    # Board name may contain spaces ("Avago SAS3216"), so plain word splitting
+    # truncates it. The -b output is fixed-width; derive the Board Name column
+    # boundaries from the header line and cut that range. Falls back to the old
+    # single-word behaviour if the header is ever missing.
+    local BOARD_HDR BN_START BA_START
+    BOARD_HDR=$(echo "$BOARD_RAW" | grep "Board Name" | head -1)
+    BN_START=$(awk -v h="$BOARD_HDR" 'BEGIN{print index(h,"Board Name")}')
+    BA_START=$(awk -v h="$BOARD_HDR" 'BEGIN{print index(h,"Board Assembly")}')
+    if [ "${BN_START:-0}" -gt 0 ] && [ "${BA_START:-0}" -gt "$BN_START" ]; then
+        BOARD_NAME=$(echo "$BOARD_LINE" | cut -c"${BN_START}-$((BA_START - 1))" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    else
+        BOARD_NAME=$(echo "$BOARD_LINE" | awk '{print $5}')
+    fi
     PCI_BUS=$(echo "$BOARD_LINE"   | awk '{print $3}')
     PCI_DEV=$(echo "$BOARD_LINE"   | awk '{print $4}')
 
@@ -121,12 +133,24 @@ read_controller() {
             esac
             [[ "$SYSFS_WIDTH" =~ ^[0-9]+$ ]] && PCIE_WIDTH="x$SYSFS_WIDTH"
 
-            FW_PATH=$(find "$SYSFS_PCI" -maxdepth 5 -name version_fw 2>/dev/null | head -1)
+            # Entries under /sys/bus/pci/devices/ are symlinks; find(1) does not
+            # descend into a symlinked start point without -L, so version_fw was
+            # never found and the raw lsiutil hex value leaked through (e.g.
+            # "0f.00.00.00" instead of "15.00.00.00" on a SAS3216).
+            FW_PATH=$(find -L "$SYSFS_PCI" -maxdepth 5 -name version_fw 2>/dev/null | head -1)
             if [ -n "$FW_PATH" ]; then
                 SYSFS_FW=$(tr -d '[:space:]' < "$FW_PATH" 2>/dev/null)
                 [ -n "$SYSFS_FW" ] && FW_VER="$SYSFS_FW"
             fi
         fi
+    fi
+
+    # Chip model fallback (SAS3216/3224 and others): lsiutil 1.70 predates these
+    # chips and prints the raw PCI device id ("LSI Logic 00c9 01") in the banner,
+    # so the SAS[0-9]+ match above comes up empty. The board name from lsiutil -b
+    # / mpt3sas sysfs ("Avago SAS3216") still carries the chip name - reuse it.
+    if [ -z "$MODEL" ]; then
+        MODEL=$(echo "$BOARD_NAME" | grep -oE 'SAS[0-9]+[A-Za-z0-9]*' | head -1)
     fi
 
     if   [ "$TEMP_SUPPORTED" = false ];           then STATUS="unsupported"

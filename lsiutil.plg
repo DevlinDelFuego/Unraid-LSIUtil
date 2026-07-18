@@ -2,10 +2,10 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name        "LSIUtil">
 <!ENTITY author      "DevlinDelFuego">
-<!ENTITY version     "2026.07.10.2">
+<!ENTITY version     "2026.07.18.1">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
-<!ENTITY md5         "1ee633df72bde05c68cc89fbdb50cc12">
+<!ENTITY md5         "f942c30e0f0fc63e76a344602c90be07">
 ]>
 
 <!--
@@ -25,6 +25,21 @@
         support="https://forums.unraid.net/topic/195220-support-devlindelfuego-all-images-and-files">
 
 <CHANGES>
+###2026.07.18.1###
+- Fix: Overview showed wrong Chip, Model/Board, and Firmware fields on cards lsiutil
+  1.70 (2013) predates, such as the SAS3216/SAS3224 - Chip showed "Unknown", the
+  Board Name was truncated to its first word ("Avago" instead of "Avago SAS3216"),
+  and Firmware displayed the raw undecoded hex ("0f.00.00.00" instead of
+  "15.00.00.00"). Root causes: the sysfs firmware lookup used a plain `find` against
+  a symlinked sysfs path and never descended into it (also silently affecting the
+  SAS3008/3108 firmware fix from #6); the Board Name column was parsed by fixed word
+  position instead of the table's actual header-derived boundaries; and the chip
+  model had no fallback when lsiutil's banner doesn't recognize the PCI device id.
+  Board Name parsing now follows the header layout, firmware lookup follows the
+  sysfs symlink, and chip model falls back to parsing the board name when unknown
+  to lsiutil (issue #7, thanks to Brennmeister1 for the root-cause analysis, fix,
+  and test data)
+
 ###2026.07.10.2###
 - Fix: Dashboard tile text hard to read on light Unraid themes (white/azure). The
   tile has no background of its own - it inherits whatever the active theme
