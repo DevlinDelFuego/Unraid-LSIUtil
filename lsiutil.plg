@@ -2,10 +2,10 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name        "LSIUtil">
 <!ENTITY author      "DevlinDelFuego">
-<!ENTITY version     "2026.07.18.1">
+<!ENTITY version     "2026.07.22.1">
 <!ENTITY pluginURL   "https://raw.githubusercontent.com/DevlinDelFuego/Unraid-LSIUtil/main/lsiutil.plg">
 <!ENTITY pkgURL      "https://github.com/DevlinDelFuego/Unraid-LSIUtil/releases/download/&version;/lsiutil.txz">
-<!ENTITY md5         "f942c30e0f0fc63e76a344602c90be07">
+<!ENTITY md5         "e83881dafd7e669e5635b93a7237ea0e">
 ]>
 
 <!--
@@ -25,6 +25,15 @@
         support="https://forums.unraid.net/topic/195220-support-devlindelfuego-all-images-and-files">
 
 <CHANGES>
+###2026.07.22.1###
+- Add: Dashboard tile now lists every detected controller instead of only the one
+  selected in Settings, when more than one is found (e.g. two physical HBAs, or a
+  9206-16e that enumerates as two ports) - each shows as its own compact row with
+  model, port, and temperature. The tile's header color/badge and collapsed-view
+  temp reading now reflect the worst card, not just the selected one, so a problem
+  on the "other" card is never hidden. Single-card systems are unchanged (requested
+  on the support forum by fxppc and JohnnyGrey)
+
 ###2026.07.18.1###
 - Fix: Overview showed wrong Chip, Model/Board, and Firmware fields on cards lsiutil
   1.70 (2013) predates, such as the SAS3216/SAS3224 - Chip showed "Unknown", the

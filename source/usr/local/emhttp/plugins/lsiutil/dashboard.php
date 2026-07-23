@@ -35,12 +35,41 @@ $temp          = isset($data['temp'])       ? (int)$data['temp']    : null;
 $status        = $data['status']            ?? 'ok';
 $tempSupported = $data['temp_supported']    ?? true;
 $error         = $data['error']             ?? ($temp === null ? 'lsiutil unavailable' : null);
+
+// Multi-HBA systems (forum request, 2026.07): the tile only ever watched the
+// HBA_PORT-selected card. get_hba_info.sh already emits every detected port
+// under "controllers" for the Overview tab table - reuse it here as a
+// per-card row list instead of forcing users to pick just one to monitor.
+$controllers = $data['controllers'] ?? [];
+$multi       = count($controllers) > 1;
+
+if ($multi) {
+    // Header color/badge/temp reflect the worst card, not just the selected
+    // one, so a problem on the "other" card isn't hidden behind a collapsed tile.
+    $rank      = ['ok' => 0, 'unsupported' => 0, 'warn' => 1, 'alert' => 2];
+    $status    = 'ok';
+    $worstRank = -1;
+    $worstTemp = null;
+    foreach ($controllers as $c) {
+        $cs = $c['status'] ?? 'ok';
+        $r  = $rank[$cs] ?? 0;
+        if ($r > $worstRank) { $worstRank = $r; $status = $cs; }
+        if (($c['temp_supported'] ?? true) && isset($c['temp'])) {
+            $ct = (int)$c['temp'];
+            if ($worstTemp === null || $ct > $worstTemp) $worstTemp = $ct;
+        }
+    }
+    $tempSupported = $worstTemp !== null;
+    $temp          = $worstTemp;
+}
+
 $tc       = match ($status) { 'alert' => '#e74c3c', 'warn' => '#f39c12', 'unsupported' => '#666', default => '#2ecc71' };
 $badge    = match ($status) { 'alert' => 'ALERT',   'warn' => 'WARNING',  'unsupported' => 'N/A', default => 'NORMAL'  };
 $tempDisplay = $tempSupported ? $temp : 'N/A';
 $tempUnit    = $tempSupported ? '°C'  : '';
 
-$boardName = htmlspecialchars(!empty($data['board_name']) ? $data['board_name'] : ($data['model'] ?? 'Unknown'));
+$boardName      = htmlspecialchars(!empty($data['board_name']) ? $data['board_name'] : ($data['model'] ?? 'Unknown'));
+$headerSubtitle = $multi ? count($controllers) . ' Controllers' : $boardName;
 $chip      = htmlspecialchars($data['model']    ?? '');
 $firmware  = htmlspecialchars($data['firmware'] ?? '');
 $portName  = htmlspecialchars($data['port_name'] ?? 'ioc0');
@@ -81,12 +110,20 @@ echo <<<CSS
   border:1px solid {$tc}; border-radius:12px; padding:2px 10px;
   margin-right:8px; white-space:nowrap;
 }
+#tblLsiutil .lu-d-multi { display:flex; flex-direction:column; gap:9px; }
+#tblLsiutil .lu-d-multi-row { display:flex; align-items:center; gap:10px; }
+#tblLsiutil .lu-d-multi-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+#tblLsiutil .lu-d-multi-info { display:flex; flex-direction:column; flex:1; min-width:0; }
+#tblLsiutil .lu-d-multi-name { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#tblLsiutil .lu-d-multi-sub { font-size:11px; opacity:.6; }
+#tblLsiutil .lu-d-multi-temp { font-size:15px; font-weight:700; flex-shrink:0; }
 </style>
 CSS;
 
-// Build PCIe row
+// Build PCIe row (single-card layout only - each multi-card row is compact
+// and has no room for a PCIe breakdown; that detail lives on the Overview tab)
 $pcieRow = '';
-if (!$error) {
+if (!$error && !$multi) {
     $pcieParts = [];
     if (!empty($data['pcie_width']))   $pcieParts[] = '<span class="lu-d-label">PCIe Width:</span> <span>' . htmlspecialchars($data['pcie_width'])   . '</span>';
     if (!empty($data['pcie_speed']))   $pcieParts[] = '<span class="lu-d-label">PCIe Speed:</span> <span>' . htmlspecialchars($data['pcie_speed'])   . '</span>';
@@ -95,9 +132,36 @@ if (!$error) {
     if ($pcieParts) $pcieRow = '<div class="lu-d-pcie">' . implode('', $pcieParts) . '</div>';
 }
 
+// Build one compact row per detected card for multi-HBA systems
+$multiRows = '';
+if (!$error && $multi) {
+    foreach ($controllers as $c) {
+        $cStatus        = $c['status'] ?? 'ok';
+        $cColor         = match ($cStatus) { 'alert' => '#e74c3c', 'warn' => '#f39c12', 'unsupported' => '#666', default => '#2ecc71' };
+        $cTempSupported = $c['temp_supported'] ?? true;
+        $cTempDisplay   = $cTempSupported ? ((int)($c['temp'] ?? 0) . '°C') : 'N/A';
+        $cBoard         = htmlspecialchars(!empty($c['board_name']) ? $c['board_name'] : ($c['model'] ?? 'Unknown'));
+        $cPort          = (int)($c['port'] ?? 0);
+        $cSub           = 'Port ' . $cPort . ($cPort === $port ? ' &middot; default' : '');
+        $multiRows .= "
+      <div class='lu-d-multi-row'>
+        <span class='lu-d-multi-dot' style='background:{$cColor}'></span>
+        <div class='lu-d-multi-info'>
+          <span class='lu-d-multi-name'>{$cBoard}</span>
+          <span class='lu-d-multi-sub'>{$cSub}</span>
+        </div>
+        <span class='lu-d-multi-temp' style='color:{$cColor}'>{$cTempDisplay}</span>
+      </div>";
+    }
+}
+
 // Tile body
 if ($error) {
     $body = "<span style='color:#d88'>" . htmlspecialchars($error) . "</span>";
+} elseif ($multi) {
+    $body = "
+    <div class='lu-d-multi'>{$multiRows}</div>
+    <div class='lu-d-ts'>Last read: {$ts}</div>";
 } else {
     $body = "
     <div class='lu-d-overview'>
@@ -120,7 +184,8 @@ if ($error) {
 
 // Compact temp badge shown in the tile header itself, so it's visible even
 // when the user has collapsed the tile body (issue #4)
-$headerTemp = ($error || !$tempSupported) ? '' : "<span class=\"lu-d-header-temp\">{$tempDisplay}{$tempUnit}</span>";
+$headerTempTitle = $multi ? ' title="Highest reading across ' . count($controllers) . ' cards"' : '';
+$headerTemp = ($error || !$tempSupported) ? '' : "<span class=\"lu-d-header-temp\"{$headerTempTitle}>{$tempDisplay}{$tempUnit}</span>";
 
 $mytiles[$pluginname]['column1'] = <<<EOT
 <tbody id="tblLsiutil" title="HBA Temperature">
@@ -131,7 +196,7 @@ $mytiles[$pluginname]['column1'] = <<<EOT
           <i class="fa fa-thermometer-half f32" style="color:{$tc}"></i>
           <div class="section">
             <h3 class="tile-header-main">HBA Temperature</h3>
-            <span>{$boardName}</span>
+            <span>{$headerSubtitle}</span>
           </div>
         </span>
         <span class="tile-header-right">
